@@ -1,0 +1,34 @@
+{
+  "name": "flash-loan-dapp",
+  "version": "1.0.0",
+  "description": "Multi-blockchain flash loan dApp supporting EOS, TON, and SUI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "jest",
+    "test:eos": "cd tests && npm run test:eos",
+    "test:ton": "cd tests && npm run test:ton",
+    "test:sui": "cd tests && npm run test:sui",
+    "test:backend": "jest backend",
+    "test:frontend": "jest frontend",
+    "deploy:eos": "./scripts/deploy-eos.sh",
+    "deploy:ton": "./scripts/deploy-ton.sh",
+    "deploy:sui": "./scripts/deploy-sui.sh",
+    "build": "npm run build:eos && npm run build:ton && npm run build:sui",
+    "build:eos": "cd contracts/eos && eosio-cpp -abigen flashloan.cpp -o flashloan.wasm",
+    "build:ton": "cd contracts/ton && npx blueprint build",
+    "build:sui": "cd contracts/sui && sui move build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/damfeatherstoner-sketch/flash-loan-dapp.git"
+  },
+  "keywords": ["flash-loan", "defi", "eos", "ton", "sui", "blockchain"],
+  "author": "damfeatherstoner-sketch",
+  "license": "MIT",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}

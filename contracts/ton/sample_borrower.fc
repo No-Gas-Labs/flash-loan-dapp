@@ -1,0 +1,48 @@
+;; Sample Borrower Contract for TON
+
+() recv_internal(slice in_msg) impure {
+  int op = in_msg~load_uint(32);
+  
+  if (op == 0x11111111) { ;; execute flash loan
+    slice flashloan_addr = in_msg~load_msg_addr();
+    int amount = in_msg~load_coins();
+    int duration = in_msg~load_uint(32);
+    
+    ;; Send borrow request
+    var msg = begin_cell()
+      .store_uint(0x87654321, 32) ;; borrow op
+      .store_uint(0, 64) ;; query_id
+      .store_slice(my_address())
+      .store_coins(amount)
+      .store_uint(duration, 32)
+      .end_cell();
+    
+    send_raw_message(msg, 64);
+  }
+}
+
+() handle_flash_loan_received(int amount) impure {
+  ;; Implement arbitrage strategy here
+  ;; Example:
+  ;; 1. Trade on DEX A
+  ;; 2. Trade on DEX B
+  ;; 3. Calculate profit
+  
+  ;; After strategy, repay loan
+  int profit = calculate_profit(amount);
+  int repayment_amount = amount + profit;
+  
+  var msg = begin_cell()
+    .store_uint(0xabcdef01, 32) ;; repay op
+    .store_uint(0, 64)
+    .store_slice(my_address())
+    .store_uint(1, 64) ;; loan_id
+    .end_cell();
+  
+  send_raw_message(msg, 64);
+}
+
+int calculate_profit(int amount) {
+  ;; Implement actual profit calculation
+  return amount * 100 / 10000; ;; 1% profit example
+}

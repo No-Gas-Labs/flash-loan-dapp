@@ -1,0 +1,100 @@
+;; Flash Loan Contract for TON Blockchain
+
+() recv_external(slice in_msg) impure {
+  ;; Handle external messages
+}
+
+() recv_internal(slice in_msg) impure {
+  int op = in_msg~load_uint(32);
+  int query_id = in_msg~load_uint(64);
+  
+  if (op == 0x12345678) { ;; deposit
+    slice from_addr = in_msg~load_msg_addr();
+    int amount = in_msg~load_coins();
+    deposit(amount);
+  } else if (op == 0x87654321) { ;; borrow
+    slice borrower_addr = in_msg~load_msg_addr();
+    int amount = in_msg~load_coins();
+    int duration = in_msg~load_uint(32);
+    borrow(borrower_addr, amount, duration);
+  } else if (op == 0xabcdef01) { ;; repay
+    slice borrower_addr = in_msg~load_msg_addr();
+    int loan_id = in_msg~load_uint(64);
+    repay(borrower_addr, loan_id);
+  }
+}
+
+cell storage_dict() asm "dictnew" "c PUSHCONT { DICTNEW } CONT" "c PUSHCONT { DICTNEW } CONT" "c PUSHCONT { DICTNEW } CONT";
+
+() deposit(int amount) impure {
+  ;; Add to liquidity pool
+  var (balance, fee_rate, max_ratio) = load_pool_data();
+  balance += amount;
+  save_pool_data(balance, fee_rate, max_ratio);
+}
+
+() borrow(slice borrower_addr, int amount, int duration) impure {
+  var (balance, fee_rate, max_ratio) = load_pool_data();
+  
+  ;; Check max loan ratio
+  int max_allowed = balance * max_ratio / 10000;
+  throw_if(1001, amount > max_allowed);
+  
+  int fee = amount * fee_rate / 10000;
+  
+  ;; Create loan record
+  int loan_id = generate_loan_id();
+  save_loan(loan_id, borrower_addr, amount, fee, now() + duration, 0);
+  
+  ;; Send loan amount
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(borrower_addr)
+    .store_coins(amount)
+    .store_uint(0, 1 + 4 + 4 + 64)
+    .store_slice("Flash loan")
+    .end_cell();
+  send_raw_message(msg, 0);
+}
+
+() repay(slice borrower_addr, int loan_id) impure {
+  var (borrower, amount, fee, expiry, repaid) = load_loan(loan_id);
+  throw_unless(1002, borrower == borrower_addr);
+  throw_unless(1003, repaid == 0);
+  throw_unless(1004, now() < expiry);
+  
+  int total_repayment = amount + fee;
+  
+  var (balance, fee_rate, max_ratio) = load_pool_data();
+  balance += fee;
+  save_pool_data(balance, fee_rate, max_ratio);
+  
+  save_loan(loan_id, borrower, amount, fee, expiry, 1);
+}
+
+() load_pool_data() {
+  slice ds = get_data().begin_parse();
+  return (ds~load_coins(), ds~load_uint(16), ds~load_uint(16));
+}
+
+() save_pool_data(int balance, int fee_rate, int max_ratio) impure {
+  var data = begin_cell()
+    .store_coins(balance)
+    .store_uint(fee_rate, 16)
+    .store_uint(max_ratio, 16)
+    .end_cell();
+  set_data(data);
+}
+
+() load_loan(int loan_id) {
+  ;; Implementation to load loan data from storage
+}
+
+() save_loan(int loan_id, slice borrower, int amount, int fee, int expiry, int repaid) impure {
+  ;; Implementation to save loan data
+}
+
+int generate_loan_id() {
+  ;; Generate unique loan ID
+  return now();
+}
